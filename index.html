@@ -4,12 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>كلماتي الجديدة</title>
+  
+  <!-- الربط بملف الأيقونة وبيانات التثبيت -->
   <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  
+  <!-- إعدادات الآيفون ليعمل كـ تطبيق شاشة كاملة -->
   <meta name="theme-color" content="#7C3AED" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="كلماتي" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
+  
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet" />
   
@@ -21,7 +27,7 @@
       --card-bg: #FFFFFF;
       --border: #E2D9F3;
       --text: #221B38;
-      --shadow: rgba(139,92,246, 0.15);
+      --shadow: rgba(139, 92, 246, 0.15);
     }
     [data-theme="dark"] {
       --accent: #A78BFA;
@@ -30,37 +36,157 @@
       --card-bg: #18102B;
       --border: #372B54;
       --text: #F3EFFE;
-      --shadow: rgba(0,0,0, 0.4);
+      --shadow: rgba(0, 0, 0, 0.4);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 16px 16px 110px 16px; }
-    .hero { background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(91,33,182,0.04)); border: 1px solid var(--border); border-radius: 20px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: 'Tajawal', sans-serif; 
+      -webkit-tap-highlight-color: transparent; 
+    }
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      min-height: 100vh; 
+      padding: 16px 16px 110px 16px; 
+    }
+    .hero { 
+      background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(91,33,182,0.04)); 
+      border: 1px solid var(--border); 
+      border-radius: 20px; 
+      padding: 16px 20px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      margin-bottom: 16px; 
+    }
     .hero-title { font-size: 22px; font-weight: 900; }
     .hero-sub { font-size: 12px; opacity: 0.7; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-shadow: 0 4px 20px -6px var(--shadow); margin-bottom: 14px; }
+    .card { 
+      background: var(--card-bg); 
+      border: 1px solid var(--border); 
+      border-radius: 18px; 
+      padding: 16px; 
+      box-shadow: 0 4px 20px -6px var(--shadow); 
+      margin-bottom: 14px; 
+    }
     .form-group { margin-bottom: 12px; }
     label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-    input[type="text"] { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: inherit; font-size: 15px; outline: none; }
+    input[type="text"] { 
+      width: 100%; 
+      padding: 12px 14px; 
+      border-radius: 12px; 
+      border: 1px solid var(--border); 
+      background: transparent; 
+      color: inherit; 
+      font-size: 15px; 
+      outline: none; 
+    }
     input[type="text"]:focus { border-color: var(--accent); }
-    .btn { cursor: pointer; border: none; border-radius: 12px; padding: 10px 16px; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-    .btn-primary { background: var(--accent-grad); color: white; box-shadow: 0 6px 16px -6px rgba(139,92,246,0.5); width: 100%; }
-    .btn-icon { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .btn { 
+      cursor: pointer; 
+      border: none; 
+      border-radius: 12px; 
+      padding: 10px 16px; 
+      font-weight: 700; 
+      font-size: 14px; 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 6px; 
+    }
+    .btn-primary { 
+      background: var(--accent-grad); 
+      color: white; 
+      box-shadow: 0 6px 16px -6px rgba(139,92,246,0.5); 
+      width: 100%; 
+    }
+    .btn-icon { 
+      width: 36px; 
+      height: 36px; 
+      min-width: 36px;
+      border-radius: 50%; 
+      border: 1px solid var(--border); 
+      background: transparent; 
+      color: inherit; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      cursor: pointer; 
+    }
     
-    /* صف قائمة الكلمات */
-    .word-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border); padding: 10px 0; }
+    /* صف الكلمة في سطر واحد ثابت */
+    .word-row { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      gap: 8px; 
+      border-bottom: 1px solid var(--border); 
+      padding: 10px 0; 
+    }
     .word-row:last-child { border-bottom: none; }
     .word-en { font-weight: 800; font-size: 16px; flex: 1; direction: ltr; text-align: right; }
     .word-ar { font-size: 14px; flex: 1.2; opacity: 0.85; }
     .word-actions { display: flex; align-items: center; gap: 6px; }
 
     /* الزر الدائري في منتصف أسفل الشاشة */
-    .nav-circle-btn { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; background: var(--accent-grad); color: white; border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 8px 25px rgba(139,92,246,0.65); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; cursor: pointer; z-index: 9999; }
+    .nav-circle-btn { 
+      position: fixed; 
+      bottom: 25px; 
+      left: 50%; 
+      transform: translateX(-50%); 
+      width: 64px; 
+      height: 64px; 
+      border-radius: 50%; 
+      background: var(--accent-grad); 
+      color: white; 
+      border: 2px solid rgba(255,255,255,0.3); 
+      box-shadow: 0 8px 25px rgba(139,92,246,0.65); 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 11px; 
+      font-weight: 900; 
+      cursor: pointer; 
+      z-index: 9999; 
+    }
     
-    /* نافذة القائمة المنبثقة */
-    .menu-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: flex-end; justify-content: center; }
+    /* نافذة القائمة */
+    .menu-modal { 
+      display: none; 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(0,0,0,0.5); 
+      z-index: 10000; 
+      align-items: flex-end; 
+      justify-content: center; 
+    }
     .menu-modal.active { display: flex; }
-    .menu-sheet { background: var(--card-bg); width: 100%; max-width: 480px; border-radius: 24px 24px 0 0; padding: 20px; box-shadow: 0 -8px 30px rgba(0,0,0,0.2); }
-    .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700; width: 100%; border: none; background: transparent; color: inherit; text-align: right; }
+    .menu-sheet { 
+      background: var(--card-bg); 
+      width: 100%; 
+      max-width: 480px; 
+      border-radius: 24px 24px 0 0; 
+      padding: 20px; 
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.2); 
+    }
+    .menu-item { 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      padding: 12px; 
+      border-radius: 12px; 
+      cursor: pointer; 
+      font-size: 15px; 
+      font-weight: 700; 
+      width: 100%; 
+      border: none; 
+      background: transparent; 
+      color: inherit; 
+      text-align: right; 
+    }
     .menu-item:active { background: rgba(139,92,246,0.1); }
   </style>
 </head>
@@ -125,12 +251,12 @@
   </div>
 
   <script>
-    // تسجيل Service Worker للعمل أوفلاين
+    // تشغيل الـ Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
 
-    // قاعدة البيانات المحلية
+    // قاعدة البيانات المحلية في ذاكرة الهاتف
     let words = JSON.parse(localStorage.getItem('my_words') || '[]');
 
     function saveToStorage() {
@@ -156,9 +282,10 @@
       document.documentElement.setAttribute('data-theme', target);
       localStorage.setItem('my_theme', target);
     }
-    if (localStorage.getItem('my_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    if (localStorage.getItem('my_theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
 
-    // حفظ الكلمة
     function saveWord() {
       const en = document.getElementById('add-en').value.trim();
       const ar = document.getElementById('add-ar').value.trim();
@@ -167,10 +294,9 @@
       saveToStorage();
       document.getElementById('add-en').value = '';
       document.getElementById('add-ar').value = '';
-      alert('تم حفظ الكلمة بنجاح!');
+      alert('تم حفظ الكلمة بنجاح في هاتفك!');
     }
 
-    // عرض القائمة
     function renderList() {
       document.getElementById('words-count').innerText = `كلماتي (${words.length})`;
       const container = document.getElementById('words-container');
@@ -197,7 +323,6 @@
       }
     }
 
-    // النطق الصوتي
     function speak(text) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -205,17 +330,17 @@
       window.speechSynthesis.speak(u);
     }
 
-    // التسجيل الصوتي
     function voiceInput() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) return alert('المتصفح لا يدعم التعرف على الصوت');
       const r = new SR();
       r.lang = 'en-US';
-      r.onresult = e => { document.getElementById('add-en').value = e.results[0][0].transcript; };
+      r.onresult = e => { 
+        document.getElementById('add-en').value = e.results[0][0].transcript; 
+      };
       r.start();
     }
 
-    // اختبار المعنى
     function startQuiz() {
       const container = document.getElementById('quiz-body');
       if (words.length < 2) {
@@ -228,7 +353,7 @@
 
       container.innerHTML = `
         <div style="font-size: 18px; font-weight: 800; margin-bottom: 12px;">ما معنى: "${q.en}"؟</div>
-        <button class="btn" style="border: 1px solid var(--border); border-radius: 50px; padding: 6px 16px; margin-bottom: 14px;" onclick="speak('${q.en}')">🔊 اسمع الكلمة</button>
+        <button class="btn" style="border: 1px solid var(--border); border-radius: 50px; padding: 6px 18px; margin-bottom: 14px;" onclick="speak('${q.en}')">🔊 اسمع الكلمة</button>
         <div style="display: flex; flex-direction: column; gap: 8px;">
           ${opts.map(opt => `<button class="btn" style="border: 1px solid var(--border); width: 100%; text-align: right;" onclick="checkAnswer('${opt}', '${q.ar}')">${opt}</button>`).join('')}
         </div>
