@@ -216,7 +216,7 @@
       <label>الكلمة الإنجليزية</label>
       <div style="display: flex; gap: 8px;">
         <input type="text" id="add-en" placeholder="مثال: Achievement" />
-        <button class="btn-icon" onclick="voiceInputForAdd()" title="نطق الكلمة للإدخال">🎤</button>
+        <button class="btn-icon" id="add-mic-btn" onclick="voiceInputForAdd()" title="نطق الكلمة للإدخال">🎤</button>
       </div>
     </div>
     <div class="form-group">
@@ -282,11 +282,8 @@
   </div>
 
   <script>
-    let swRegistration = null;
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').then(reg => {
-        swRegistration = reg;
-      });
+      navigator.serviceWorker.register('sw.js');
     }
 
     async function forceAppUpdate() {
@@ -294,35 +291,11 @@
       if (!navigator.onLine) {
         return alert('يرجى الاتصال بالإنترنت أولاً للتحقق من وجود تحديثات.');
       }
-      const confirmUpdate = confirm('سيتم فحص GitHub وتنزيل أحدث التحديثات. هل تريد المتابعة؟');
-      if (!confirmUpdate) return;
-
-      try {
-        if (swRegistration) await swRegistration.update();
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map(key => caches.delete(key)));
-        }
-        window.location.reload(true);
-      } catch (e) {
-        window.location.reload(true);
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
       }
-    }
-
-    // دالة فحص وطلب إذن الميكروفون النشط في كل مرة
-    async function requestMicPermission() {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          // إيقاف البث المؤقت فور أخذ الإذن
-          stream.getTracks().forEach(track => track.stop());
-          return true;
-        } catch (err) {
-          alert('يرجى السماح بالوصول للميكروفون من إعدادات Safari ليعمل التسجيل الصوتي.');
-          return false;
-        }
-      }
-      return true;
+      window.location.reload(true);
     }
 
     let words = JSON.parse(localStorage.getItem('my_words') || '[]');
@@ -423,16 +396,46 @@
       window.speechSynthesis.speak(u);
     }
 
-    async function voiceInputForAdd() {
-      const hasPermission = await requestMicPermission();
-      if (!hasPermission) return;
-
+    // إنشاء محرك التعرف الصوتي المتوافق مع متصفح Safari و iOS
+    function createRecognizer() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) return alert('المتصفح لا يدعم التعرف الصوتي');
+      if (!SR) return null;
       const r = new SR();
       r.lang = 'en-US';
-      r.onresult = e => { document.getElementById('add-en').value = e.results[0][0].transcript; };
-      r.start();
+      r.continuous = false;
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+      return r;
+    }
+
+    function voiceInputForAdd() {
+      const r = createRecognizer();
+      if (!r) return alert('المتصفح لا يدعم التعرف الصوتي');
+
+      const btn = document.getElementById('add-mic-btn');
+      const input = document.getElementById('add-en');
+      btn.innerText = '⏳';
+      input.placeholder = 'أستمع إليك الآن...';
+
+      r.onresult = e => {
+        if (e.results && e.results[0] && e.results[0][0]) {
+          input.value = e.results[0][0].transcript;
+        }
+      };
+      r.onerror = e => {
+        if (e.error !== 'no-speech') {
+          alert('تعذر التقاط الصوت (' + e.error + ')، تأكد من نطق الكلمة بوضوح.');
+        }
+      };
+      r.onend = () => {
+        btn.innerText = '🎤';
+        input.placeholder = 'مثال: Achievement';
+      };
+      try {
+        r.start();
+      } catch (err) {
+        btn.innerText = '🎤';
+      }
     }
 
     /* اختبار المعنى */
@@ -494,6 +497,8 @@
 
     /* اختبار النطق الصوتي */
     let currentPronWord = null;
+    let activePronRecognizer = null;
+
     function startPronQuiz() {
       const container = document.getElementById('pron-body');
       if (words.length === 0) {
@@ -507,40 +512,67 @@
         <div style="margin-bottom: 16px;">المعنى: ${currentPronWord.ar}</div>
         <div style="display: flex; gap: 10px; margin-bottom: 14px;">
           <button class="btn" style="border: 1px solid var(--border); border-radius: 50px; padding: 6px 16px;" onclick="speak('${currentPronWord.en}')">🔊 استمع للأصل</button>
-          <button class="btn btn-primary" style="border-radius: 50px; padding: 6px 18px;" onclick="listenPronunciation()">🎙️ انطق الآن</button>
+          <button class="btn btn-primary" id="pron-mic-btn" style="border-radius: 50px; padding: 6px 18px;" onclick="listenPronunciation()">🎙️ انطق الآن</button>
         </div>
         <div id="pron-result" style="font-weight: bold; font-size: 15px; margin-top: 10px;"></div>
         <button class="btn btn-secondary" style="margin-top: 14px; width: 100%;" onclick="startPronQuiz()">كلمة أخرى ↻</button>
       `;
     }
 
-    async function listenPronunciation() {
-      const hasPermission = await requestMicPermission();
-      if (!hasPermission) return;
+    function listenPronunciation() {
+      const r = createRecognizer();
+      if (!r) return alert('المتصفح لا يدعم التسجيل والتعرف الصوتي');
 
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) return alert('المتصفح لا يدعم التسجيل والتعرف الصوتي');
-      const r = new SR();
-      r.lang = 'en-US';
       const resBox = document.getElementById('pron-result');
-      resBox.innerText = 'أستمع إليك الآن... 🎙️';
-      resBox.style.color = 'inherit';
+      const micBtn = document.getElementById('pron-mic-btn');
+      resBox.innerText = 'أستمع إليك الآن... تكلم بصوت واضح 🎙️';
+      resBox.style.color = 'var(--accent)';
+      micBtn.disabled = true;
+      micBtn.style.opacity = '0.6';
+
+      let speechDetected = false;
 
       r.onresult = e => {
-        const heard = e.results[0][0].transcript.trim().toLowerCase();
-        const expected = currentPronWord.en.toLowerCase();
-        if (heard === expected) {
-          resBox.innerText = `رائع جداً! نطق سليم 100% (سمعت: ${heard}) ✅`;
-          resBox.style.color = 'var(--green)';
-        } else {
-          resBox.innerText = `حاول مرة أخرى! سمعت: "${heard}" والمطلوب: "${expected}" ❌`;
-          resBox.style.color = 'var(--red)';
+        speechDetected = true;
+        if (e.results && e.results[0] && e.results[0][0]) {
+          const heard = e.results[0][0].transcript.trim().toLowerCase();
+          const expected = currentPronWord.en.toLowerCase();
+          
+          if (heard === expected) {
+            resBox.innerText = `رائع جداً! نطق سليم 100% (سمعت: "${heard}") ✅`;
+            resBox.style.color = 'var(--green)';
+          } else {
+            resBox.innerText = `قريب! سمعت: "${heard}" — الكلمة المطلوبة: "${expected}" ❌`;
+            resBox.style.color = 'var(--red)';
+          }
         }
       };
-      r.onerror = () => {
-        resBox.innerText = 'حدث خطأ في التقاط الصوت، أعد المحاولة.';
+
+      r.onerror = e => {
+        if (e.error === 'no-speech') {
+          resBox.innerText = 'لم يتم سماع صوت. اضغط "انطق الآن" وتحدث مباشرة.';
+        } else {
+          resBox.innerText = 'تعذر الالتقاط (' + e.error + ')، تأكد من تفعيل الإملاء الصوتي في إعدادات الآيفون.';
+        }
+        resBox.style.color = 'var(--red)';
       };
-      r.start();
+
+      r.onend = () => {
+        micBtn.disabled = false;
+        micBtn.style.opacity = '1';
+        if (!speechDetected && resBox.innerText.includes('أستمع')) {
+          resBox.innerText = 'انتهى وقت الاستماع. اضغط "انطق الآن" وحاول مجدداً.';
+          resBox.style.color = 'inherit';
+        }
+      };
+
+      try {
+        r.start();
+      } catch (err) {
+        micBtn.disabled = false;
+        micBtn.style.opacity = '1';
+        resBox.innerText = 'الميكروفون قيد التشغيل بالفعل.';
+      }
     }
 
     renderList();
