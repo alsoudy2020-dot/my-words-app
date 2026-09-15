@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>كلماتي الجديدة</title>
   
-  <!-- الربط بملف الأيقونة وبيانات التثبيت -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
   
-  <!-- إعدادات الآيفون ليعمل كـ تطبيق شاشة كاملة -->
   <meta name="theme-color" content="#7C3AED" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -28,6 +26,8 @@
       --border: #E2D9F3;
       --text: #221B38;
       --shadow: rgba(139, 92, 246, 0.15);
+      --green: #16A34A;
+      --red: #DC2626;
     }
     [data-theme="dark"] {
       --accent: #A78BFA;
@@ -37,6 +37,8 @@
       --border: #372B54;
       --text: #F3EFFE;
       --shadow: rgba(0, 0, 0, 0.4);
+      --green: #4ADE80;
+      --red: #F87171;
     }
     * { 
       box-sizing: border-box; 
@@ -95,12 +97,23 @@
       align-items: center; 
       justify-content: center; 
       gap: 6px; 
+      transition: opacity 0.2s;
     }
+    .btn:active { opacity: 0.8; }
     .btn-primary { 
       background: var(--accent-grad); 
       color: white; 
       box-shadow: 0 6px 16px -6px rgba(139,92,246,0.5); 
-      width: 100%; 
+    }
+    .btn-secondary {
+      background: rgba(139,92,246,0.1);
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+    .btn-danger {
+      background: rgba(220,38,38,0.1);
+      color: var(--red);
+      border: 1px solid rgba(220,38,38,0.2);
     }
     .btn-icon { 
       width: 36px; 
@@ -116,7 +129,6 @@
       cursor: pointer; 
     }
     
-    /* صف الكلمة في سطر واحد ثابت */
     .word-row { 
       display: flex; 
       align-items: center; 
@@ -130,7 +142,6 @@
     .word-ar { font-size: 14px; flex: 1.2; opacity: 0.85; }
     .word-actions { display: flex; align-items: center; gap: 6px; }
 
-    /* الزر الدائري في منتصف أسفل الشاشة */
     .nav-circle-btn { 
       position: fixed; 
       bottom: 25px; 
@@ -153,7 +164,6 @@
       z-index: 9999; 
     }
     
-    /* نافذة القائمة */
     .menu-modal { 
       display: none; 
       position: fixed; 
@@ -207,14 +217,21 @@
       <label>الكلمة الإنجليزية</label>
       <div style="display: flex; gap: 8px;">
         <input type="text" id="add-en" placeholder="مثال: Achievement" />
-        <button class="btn-icon" onclick="voiceInput()" title="تسجيل صوتي">🎤</button>
+        <button class="btn-icon" onclick="voiceInputForAdd()" title="نطق الكلمة للإدخال">🎤</button>
       </div>
     </div>
     <div class="form-group">
-      <label>المعنى بالعربي</label>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <label style="margin: 0;">المعنى بالعربي</label>
+        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="suggestTranslation()">💡 اقترح المعنى</button>
+      </div>
       <input type="text" id="add-ar" placeholder="مثال: إنجاز" />
     </div>
-    <button class="btn btn-primary" onclick="saveWord()">➕ إضافة الكلمة</button>
+    
+    <div style="display: flex; gap: 10px; margin-top: 14px;">
+      <button class="btn btn-primary" style="flex: 2;" onclick="saveWord()">➕ إضافة الكلمة</button>
+      <button class="btn btn-danger" style="flex: 1;" onclick="cancelAdd()">✕ إلغاء</button>
+    </div>
   </div>
 
   <!-- تبويب: قائمة الكلمات -->
@@ -232,6 +249,18 @@
     <div id="quiz-body" style="margin-top: 14px;"></div>
   </div>
 
+  <!-- تبويب: اختبار الكتابة -->
+  <div id="tab-spell" class="tab-content card" style="display: none;">
+    <h3>اختبار الكتابة</h3>
+    <div id="spell-body" style="margin-top: 14px;"></div>
+  </div>
+
+  <!-- تبويب: اختبار النطق -->
+  <div id="tab-pron" class="tab-content card" style="display: none;">
+    <h3>اختبار النطق الصوتي</h3>
+    <div id="pron-body" style="margin-top: 14px;"></div>
+  </div>
+
   <!-- زر القائمة الدائري في المنتصف أسفل الشاشة -->
   <div class="nav-circle-btn" onclick="toggleMenu()">
     <span style="font-size: 16px; line-height: 1;">☰</span>
@@ -244,19 +273,53 @@
       <button class="menu-item" onclick="switchTab('add')">➕ إضافة كلمات</button>
       <button class="menu-item" onclick="switchTab('list')">📚 قائمة الكلمات</button>
       <button class="menu-item" onclick="switchTab('quiz')">🎯 اختبار المعنى</button>
+      <button class="menu-item" onclick="switchTab('spell')">✍️ اختبار الكتابة</button>
+      <button class="menu-item" onclick="switchTab('pron')">🎙️ اختبار النطق</button>
       <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--border);" />
+      <!-- زر التحديث المباشر من GitHub -->
+      <button class="menu-item" style="color: var(--accent);" onclick="forceAppUpdate()">🔄 فحص وتحديث التطبيق</button>
       <button class="menu-item" onclick="toggleTheme()">🌓 تبديل المظهر (فاتح / داكن)</button>
       <button class="menu-item" style="color: #DC2626;" onclick="toggleMenu()">إغلاق القائمة ✕</button>
     </div>
   </div>
 
   <script>
-    // تشغيل الـ Service Worker
+    let swRegistration = null;
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        swRegistration = reg;
+      });
     }
 
-    // قاعدة البيانات المحلية في ذاكرة الهاتف
+    // دالة فحص وتحديث التطبيق فورياً من GitHub
+    async function forceAppUpdate() {
+      toggleMenu();
+      if (!navigator.onLine) {
+        return alert('يرجى الاتصال بالإنترنت أولاً للتحقق من وجود تحديثات.');
+      }
+      
+      const confirmUpdate = confirm('سيتم فحص GitHub وتنزيل أحدث التحديثات وإعادة تحميل الشاشة. هل تريد المتابعة؟');
+      if (!confirmUpdate) return;
+
+      try {
+        // تحديث Service Worker
+        if (swRegistration) {
+          await swRegistration.update();
+        }
+
+        // مسح الكاش القديم بالكامل ليأتي بالجديد
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(key => caches.delete(key)));
+        }
+
+        // إعادة تحميل التطبيق بأحدث نسخة متوفرة
+        window.location.reload(true);
+      } catch (e) {
+        window.location.reload(true);
+      }
+    }
+
     let words = JSON.parse(localStorage.getItem('my_words') || '[]');
 
     function saveToStorage() {
@@ -270,6 +333,8 @@
       toggleMenu();
       if (tabId === 'list') renderList();
       if (tabId === 'quiz') startQuiz();
+      if (tabId === 'spell') startSpellQuiz();
+      if (tabId === 'pron') startPronQuiz();
     }
 
     function toggleMenu() {
@@ -286,6 +351,28 @@
       document.documentElement.setAttribute('data-theme', 'dark');
     }
 
+    function cancelAdd() {
+      document.getElementById('add-en').value = '';
+      document.getElementById('add-ar').value = '';
+      switchTab('list');
+    }
+
+    async function suggestTranslation() {
+      const en = document.getElementById('add-en').value.trim();
+      if (!en) return alert('يرجى كتابة الكلمة الإنجليزية أولاً');
+      try {
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(en)}&langpair=en|ar`);
+        const data = await res.json();
+        if (data && data.responseData && data.responseData.translatedText) {
+          document.getElementById('add-ar').value = data.responseData.translatedText;
+        } else {
+          alert('تعذر جلب الترجمة، اكتبها يدوياً');
+        }
+      } catch (err) {
+        alert('تأكد من الاتصال بالإنترنت لاقتراح الترجمة');
+      }
+    }
+
     function saveWord() {
       const en = document.getElementById('add-en').value.trim();
       const ar = document.getElementById('add-ar').value.trim();
@@ -294,7 +381,8 @@
       saveToStorage();
       document.getElementById('add-en').value = '';
       document.getElementById('add-ar').value = '';
-      alert('تم حفظ الكلمة بنجاح في هاتفك!');
+      alert('تم حفظ الكلمة بنجاح!');
+      switchTab('list');
     }
 
     function renderList() {
@@ -330,17 +418,16 @@
       window.speechSynthesis.speak(u);
     }
 
-    function voiceInput() {
+    function voiceInputForAdd() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) return alert('المتصفح لا يدعم التعرف على الصوت');
+      if (!SR) return alert('المتصفح لا يدعم التعرف الصوتي');
       const r = new SR();
       r.lang = 'en-US';
-      r.onresult = e => { 
-        document.getElementById('add-en').value = e.results[0][0].transcript; 
-      };
+      r.onresult = e => { document.getElementById('add-en').value = e.results[0][0].transcript; };
       r.start();
     }
 
+    /* اختبار المعنى */
     function startQuiz() {
       const container = document.getElementById('quiz-body');
       if (words.length < 2) {
@@ -361,12 +448,88 @@
     }
 
     function checkAnswer(chosen, correct) {
-      if (chosen === correct) {
-        alert('إجابة صحيحة! 🎉');
-      } else {
-        alert(`خطأ! الإجابة الصحيحة هي: ${correct}`);
-      }
+      if (chosen === correct) alert('إجابة صحيحة! 🎉');
+      else alert(`خطأ! الإجابة الصحيحة هي: ${correct}`);
       startQuiz();
+    }
+
+    /* اختبار الكتابة */
+    let currentSpellWord = null;
+    function startSpellQuiz() {
+      const container = document.getElementById('spell-body');
+      if (words.length === 0) {
+        container.innerHTML = '<p>أضف كلمات أولاً لبدء اختبار الكتابة.</p>';
+        return;
+      }
+      currentSpellWord = words[Math.floor(Math.random() * words.length)];
+      container.innerHTML = `
+        <div style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">اكتب الكلمة الإنجليزية للمعنى:</div>
+        <div style="font-size: 20px; font-weight: 900; color: var(--accent); margin-bottom: 12px;">"${currentSpellWord.ar}"</div>
+        <button class="btn" style="border: 1px solid var(--border); border-radius: 50px; padding: 6px 18px; margin-bottom: 14px;" onclick="speak('${currentSpellWord.en}')">🔊 اسمع الكلمة (تلميح)</button>
+        <div class="form-group">
+          <input type="text" id="spell-input" placeholder="اكتب الكلمة هنا..." style="direction: ltr; text-align: left;" />
+        </div>
+        <button class="btn btn-primary" onclick="checkSpelling()">تأكيد الإجابة</button>
+      `;
+    }
+
+    function checkSpelling() {
+      const val = document.getElementById('spell-input').value.trim().toLowerCase();
+      if (!val) return;
+      if (val === currentSpellWord.en.toLowerCase()) {
+        alert('إجابة ممتازة وصحيحة! 👏');
+      } else {
+        alert(`خطأ! الكلمة الصحيحة هي: ${currentSpellWord.en}`);
+      }
+      startSpellQuiz();
+    }
+
+    /* اختبار النطق الصوتي */
+    let currentPronWord = null;
+    function startPronQuiz() {
+      const container = document.getElementById('pron-body');
+      if (words.length === 0) {
+        container.innerHTML = '<p>أضف كلمات أولاً لبدء اختبار النطق.</p>';
+        return;
+      }
+      currentPronWord = words[Math.floor(Math.random() * words.length)];
+      container.innerHTML = `
+        <div style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">انطق الكلمة التالية:</div>
+        <div style="font-size: 24px; font-weight: 900; color: var(--accent); margin-bottom: 12px; direction: ltr;">"${currentPronWord.en}"</div>
+        <div style="margin-bottom: 16px;">المعنى: ${currentPronWord.ar}</div>
+        <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+          <button class="btn" style="border: 1px solid var(--border); border-radius: 50px; padding: 6px 16px;" onclick="speak('${currentPronWord.en}')">🔊 استمع للأصل</button>
+          <button class="btn btn-primary" style="border-radius: 50px; padding: 6px 18px;" onclick="listenPronunciation()">🎙️ انطق الآن</button>
+        </div>
+        <div id="pron-result" style="font-weight: bold; font-size: 15px; margin-top: 10px;"></div>
+        <button class="btn btn-secondary" style="margin-top: 14px; width: 100%;" onclick="startPronQuiz()">كلمة أخرى ↻</button>
+      `;
+    }
+
+    function listenPronunciation() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return alert('المتصفح لا يدعم التسجيل والتعرف الصوتي');
+      const r = new SR();
+      r.lang = 'en-US';
+      const resBox = document.getElementById('pron-result');
+      resBox.innerText = 'أستمع إليك الآن... 🎙️';
+      resBox.style.color = 'inherit';
+
+      r.onresult = e => {
+        const heard = e.results[0][0].transcript.trim().toLowerCase();
+        const expected = currentPronWord.en.toLowerCase();
+        if (heard === expected) {
+          resBox.innerText = `رائع جداً! نطق سليم 100% (سمعت: ${heard}) ✅`;
+          resBox.style.color = 'var(--green)';
+        } else {
+          resBox.innerText = `حاول مرة أخرى! سمعت: "${heard}" والمطلوب: "${expected}" ❌`;
+          resBox.style.color = 'var(--red)';
+        }
+      };
+      r.onerror = () => {
+        resBox.innerText = 'حدث خطأ في التقاط الصوت، أعد المحاولة.';
+      };
+      r.start();
     }
 
     renderList();
