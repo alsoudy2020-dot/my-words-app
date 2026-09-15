@@ -1,8 +1,10 @@
-const CACHE_NAME = 'vocab-v1';
-const ASSETS = ['./', './index.html', './manifest.json'];
+const CACHE_NAME = 'vocab-v2';
+const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+  );
   self.skipWaiting();
 });
 
@@ -16,7 +18,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // جلب الملفات من الإنترنت أولاً إذا توفر لتحديث التعديلات فوراً، والاعتماد على الكاش عند عدم توفر نت
   e.respondWith(
-    caches.match(e.request).then(res => res || fetch(e.request))
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
