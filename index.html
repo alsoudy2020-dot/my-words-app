@@ -202,7 +202,6 @@
 </head>
 <body>
 
-  <!-- الهيدر -->
   <div class="hero">
     <div>
       <div class="hero-title">📖 كلماتي الجديدة</div>
@@ -261,7 +260,7 @@
     <div id="pron-body" style="margin-top: 14px;"></div>
   </div>
 
-  <!-- زر القائمة الدائري في المنتصف أسفل الشاشة -->
+  <!-- زر القائمة الدائري -->
   <div class="nav-circle-btn" onclick="toggleMenu()">
     <span style="font-size: 16px; line-height: 1;">☰</span>
     <span>القائمة</span>
@@ -276,7 +275,6 @@
       <button class="menu-item" onclick="switchTab('spell')">✍️ اختبار الكتابة</button>
       <button class="menu-item" onclick="switchTab('pron')">🎙️ اختبار النطق</button>
       <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--border);" />
-      <!-- زر التحديث المباشر من GitHub -->
       <button class="menu-item" style="color: var(--accent);" onclick="forceAppUpdate()">🔄 فحص وتحديث التطبيق</button>
       <button class="menu-item" onclick="toggleTheme()">🌓 تبديل المظهر (فاتح / داكن)</button>
       <button class="menu-item" style="color: #DC2626;" onclick="toggleMenu()">إغلاق القائمة ✕</button>
@@ -291,33 +289,40 @@
       });
     }
 
-    // دالة فحص وتحديث التطبيق فورياً من GitHub
     async function forceAppUpdate() {
       toggleMenu();
       if (!navigator.onLine) {
         return alert('يرجى الاتصال بالإنترنت أولاً للتحقق من وجود تحديثات.');
       }
-      
-      const confirmUpdate = confirm('سيتم فحص GitHub وتنزيل أحدث التحديثات وإعادة تحميل الشاشة. هل تريد المتابعة؟');
+      const confirmUpdate = confirm('سيتم فحص GitHub وتنزيل أحدث التحديثات. هل تريد المتابعة؟');
       if (!confirmUpdate) return;
 
       try {
-        // تحديث Service Worker
-        if (swRegistration) {
-          await swRegistration.update();
-        }
-
-        // مسح الكاش القديم بالكامل ليأتي بالجديد
+        if (swRegistration) await swRegistration.update();
         if ('caches' in window) {
           const keys = await caches.keys();
           await Promise.all(keys.map(key => caches.delete(key)));
         }
-
-        // إعادة تحميل التطبيق بأحدث نسخة متوفرة
         window.location.reload(true);
       } catch (e) {
         window.location.reload(true);
       }
+    }
+
+    // دالة فحص وطلب إذن الميكروفون النشط في كل مرة
+    async function requestMicPermission() {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // إيقاف البث المؤقت فور أخذ الإذن
+          stream.getTracks().forEach(track => track.stop());
+          return true;
+        } catch (err) {
+          alert('يرجى السماح بالوصول للميكروفون من إعدادات Safari ليعمل التسجيل الصوتي.');
+          return false;
+        }
+      }
+      return true;
     }
 
     let words = JSON.parse(localStorage.getItem('my_words') || '[]');
@@ -418,7 +423,10 @@
       window.speechSynthesis.speak(u);
     }
 
-    function voiceInputForAdd() {
+    async function voiceInputForAdd() {
+      const hasPermission = await requestMicPermission();
+      if (!hasPermission) return;
+
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) return alert('المتصفح لا يدعم التعرف الصوتي');
       const r = new SR();
@@ -506,7 +514,10 @@
       `;
     }
 
-    function listenPronunciation() {
+    async function listenPronunciation() {
+      const hasPermission = await requestMicPermission();
+      if (!hasPermission) return;
+
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) return alert('المتصفح لا يدعم التسجيل والتعرف الصوتي');
       const r = new SR();
