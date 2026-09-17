@@ -215,7 +215,7 @@
     <div class="form-group">
       <label>الكلمة الإنجليزية</label>
       <div style="display: flex; gap: 8px;">
-        <input type="text" id="add-en" placeholder="مثال: Achievement" />
+        <input type="text" id="add-en" placeholder="مثال: cat أو achievement" />
         <button class="btn-icon" id="add-mic-btn" onclick="voiceInputForAdd()" title="نطق الكلمة للإدخال">🎤</button>
       </div>
     </div>
@@ -224,7 +224,7 @@
         <label style="margin: 0;">المعنى بالعربي</label>
         <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="suggestTranslation()">💡 اقترح المعنى</button>
       </div>
-      <input type="text" id="add-ar" placeholder="مثال: إنجاز" />
+      <input type="text" id="add-ar" placeholder="مثال: قطة" />
     </div>
     
     <div style="display: flex; gap: 10px; margin-top: 14px;">
@@ -286,11 +286,25 @@
       navigator.serviceWorker.register('sw.js');
     }
 
+    // قاموس محلي مدمج Offline لضمان الترجمة الفورية الدقيقة
+    const BUILTIN_DICT = {
+      "cat": "قطة", "dog": "كلب", "book": "كتاب", "car": "سيارة", "house": "منزل",
+      "apple": "تفاحة", "water": "ماء", "sun": "شمس", "moon": "قمر", "tree": "شجرة",
+      "door": "باب", "window": "نافذة", "school": "مدرسة", "teacher": "معلم", "student": "طالب",
+      "pen": "قلم", "road": "طريق", "city": "مدينة", "country": "دولة", "work": "عمل",
+      "money": "مال", "family": "عائلة", "friend": "صديق", "time": "وقت", "day": "يوم",
+      "night": "ليل", "food": "طعام", "life": "حياة", "love": "حب", "world": "عالم",
+      "happy": "سعيد", "sad": "حزين", "good": "جيد", "bad": "سيئ", "big": "كبير",
+      "small": "صغير", "fast": "سريع", "slow": "بطيء", "achievement": "إنجاز"
+    };
+
+    function isArabicText(text) {
+      return /[\u0600-\u06FF]/.test(text);
+    }
+
     async function forceAppUpdate() {
       toggleMenu();
-      if (!navigator.onLine) {
-        return alert('يرجى الاتصال بالإنترنت أولاً للتحقق من وجود تحديثات.');
-      }
+      if (!navigator.onLine) return alert('يرجى الاتصال بالإنترنت أولاً للتحقق من التحديثات.');
       if ('caches' in window) {
         const keys = await caches.keys();
         await Promise.all(keys.map(key => caches.delete(key)));
@@ -325,9 +339,7 @@
       document.documentElement.setAttribute('data-theme', target);
       localStorage.setItem('my_theme', target);
     }
-    if (localStorage.getItem('my_theme') === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }
+    if (localStorage.getItem('my_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 
     function cancelAdd() {
       document.getElementById('add-en').value = '';
@@ -335,19 +347,46 @@
       switchTab('list');
     }
 
+    // اقتراح المعنى: الفحص في القاموس الداخلي أولاً ثم عبر API مع التحقق من الحروف العربية
     async function suggestTranslation() {
-      const en = document.getElementById('add-en').value.trim();
+      const en = document.getElementById('add-en').value.trim().toLowerCase();
       if (!en) return alert('يرجى كتابة الكلمة الإنجليزية أولاً');
+
+      // 1. الفحص في القاموس الداخلي
+      if (BUILTIN_DICT[en]) {
+        document.getElementById('add-ar').value = BUILTIN_DICT[en];
+        return;
+      }
+
+      // 2. الفحص عبر الإنترنت إذا لم تكن في القاموس المدمج
       try {
         const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(en)}&langpair=en|ar`);
         const data = await res.json();
+        
+        let translated = "";
         if (data && data.responseData && data.responseData.translatedText) {
-          document.getElementById('add-ar').value = data.responseData.translatedText;
+          translated = data.responseData.translatedText.trim();
+        }
+
+        // إذا أعاد النص نفس الكلمة الإنجليزية، نبحث في المطابقات الأخرى (matches)
+        if (!isArabicText(translated) && data.matches && data.matches.length > 0) {
+          for (let m of data.matches) {
+            if (isArabicText(m.translation)) {
+              translated = m.translation.trim();
+              break;
+            }
+          }
+        }
+
+        if (isArabicText(translated)) {
+          // تنظيف أي زوائد
+          if (translated.includes('/')) translated = translated.split('/')[0].trim();
+          document.getElementById('add-ar').value = translated;
         } else {
-          alert('تعذر جلب الترجمة، اكتبها يدوياً');
+          alert('تعذر جلب الترجمة العربية، يرجى كتابتها يدوياً.');
         }
       } catch (err) {
-        alert('تأكد من الاتصال بالإنترنت لاقتراح الترجمة');
+        alert('يرجى كتابة المعنى يدوياً.');
       }
     }
 
@@ -396,47 +435,36 @@
       window.speechSynthesis.speak(u);
     }
 
-    /* إدخال الكلمة بالصوت */
+    // إدخال الكلمة بالمايك فوراً
     function voiceInputForAdd() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const input = document.getElementById('add-en');
-      const btn = document.getElementById('add-mic-btn');
-
-      if (!SR) {
-        input.focus();
-        alert('استخدم ميكروفون لوحة المفاتيح أسفل الشاشة للإملاء الصوتي.');
-        return;
-      }
+      if (!SR) return alert('المتصفح لا يدعم التسجيل المباشر');
 
       const r = new SR();
       r.lang = 'en-US';
-      btn.innerText = '⏳';
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+
+      const btn = document.getElementById('add-mic-btn');
+      const input = document.getElementById('add-en');
+      btn.innerText = '🔴';
       input.placeholder = 'تكلم الآن...';
 
       r.onresult = e => {
         if (e.results && e.results[0] && e.results[0][0]) {
-          input.value = e.results[0][0].transcript;
+          input.value = e.results[0][0].transcript.trim();
+          suggestTranslation(); // يقترح المعنى فوراً بعد التقاط الكلمة
         }
       };
-
-      r.onerror = e => {
-        input.focus();
-        if (e.error !== 'no-speech') {
-          alert('اضغط على علامة الميكروفون في لوحة المفاتيح لإدخال الكلمة مباشرة.');
-        }
+      r.onerror = () => {
+        btn.innerText = '🎤';
+        input.placeholder = 'مثال: cat أو achievement';
       };
-
       r.onend = () => {
         btn.innerText = '🎤';
-        input.placeholder = 'مثال: Achievement';
+        input.placeholder = 'مثال: cat أو achievement';
       };
-
-      try {
-        r.start();
-      } catch (err) {
-        btn.innerText = '🎤';
-        input.focus();
-      }
+      try { r.start(); } catch (err) {}
     }
 
     /* اختبار المعنى */
@@ -496,7 +524,7 @@
       startSpellQuiz();
     }
 
-    /* اختبار النطق الصوتي */
+    /* اختبار النطق الصوتي المباشر */
     let currentPronWord = null;
     function startPronQuiz() {
       const container = document.getElementById('pron-body');
@@ -507,96 +535,62 @@
       currentPronWord = words[Math.floor(Math.random() * words.length)];
       container.innerHTML = `
         <div style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">انطق الكلمة التالية:</div>
-        <div style="font-size: 24px; font-weight: 900; color: var(--accent); margin-bottom: 12px; direction: ltr;">"${currentPronWord.en}"</div>
+        <div style="font-size: 26px; font-weight: 900; color: var(--accent); margin-bottom: 8px; direction: ltr;">"${currentPronWord.en}"</div>
         <div style="margin-bottom: 16px;">المعنى: ${currentPronWord.ar}</div>
         <div style="display: flex; gap: 10px; margin-bottom: 14px;">
           <button class="btn" style="border: 1px solid var(--border); border-radius: 50px; padding: 6px 16px;" onclick="speak('${currentPronWord.en}')">🔊 استمع للأصل</button>
-          <button class="btn btn-primary" id="pron-mic-btn" style="border-radius: 50px; padding: 6px 18px;" onclick="listenPronunciation()">🎙️ انطق الآن</button>
+          <button class="btn btn-primary" id="pron-mic-btn" style="border-radius: 50px; padding: 6px 18px;" onclick="listenPronunciationDirect()">🎙️ انطق الآن</button>
         </div>
         <div id="pron-result" style="font-weight: bold; font-size: 15px; margin-top: 10px;"></div>
         <button class="btn btn-secondary" style="margin-top: 14px; width: 100%;" onclick="startPronQuiz()">كلمة أخرى ↻</button>
       `;
     }
 
-    function listenPronunciation() {
+    function listenPronunciationDirect() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const resBox = document.getElementById('pron-result');
-      const micBtn = document.getElementById('pron-mic-btn');
-
-      if (!SR) {
-        showManualPronInput();
-        return;
-      }
+      if (!SR) return alert('المتصفح لا يدعم التعرف الصوتي');
 
       const r = new SR();
       r.lang = 'en-US';
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+
+      const resBox = document.getElementById('pron-result');
+      const micBtn = document.getElementById('pron-mic-btn');
       resBox.innerText = 'أستمع إليك الآن... تكلم بصوت واضح 🎙️';
       resBox.style.color = 'var(--accent)';
+      micBtn.innerText = '🔴 جارِ الاستماع...';
       micBtn.disabled = true;
 
-      let detected = false;
-
       r.onresult = e => {
-        detected = true;
         if (e.results && e.results[0] && e.results[0][0]) {
           const heard = e.results[0][0].transcript.trim().toLowerCase();
           const expected = currentPronWord.en.toLowerCase();
-          evaluateSpokenWord(heard, expected);
+          
+          if (heard === expected) {
+            resBox.innerText = `رائع جداً! نطق سليم 100% (سمعت: "${heard}") ✅`;
+            resBox.style.color = 'var(--green)';
+          } else {
+            resBox.innerText = `سمعت: "${heard}" — الكلمة الصحيحة: "${expected}" ❌`;
+            resBox.style.color = 'var(--red)';
+          }
         }
       };
 
       r.onerror = e => {
-        if (e.error === 'no-speech') {
-          resBox.innerText = 'لم يتم سماع صوت. حاول مجدداً.';
-          resBox.style.color = 'var(--red)';
-        } else {
-          showManualPronInput();
-        }
+        resBox.innerText = 'لم يتم التعرف على الصوت بوضوح، اضغط وجرب مرة أخرى.';
+        resBox.style.color = 'var(--red)';
       };
 
       r.onend = () => {
+        micBtn.innerText = '🎙️ انطق الآن';
         micBtn.disabled = false;
-        if (!detected && !document.getElementById('manual-voice-input')) {
-          resBox.innerText = 'انتهى الاستماع. اضغط مجدداً وحاول.';
-        }
       };
 
-      try {
-        r.start();
-      } catch (err) {
+      try { r.start(); } catch (err) {
+        micBtn.innerText = '🎙️ انطق الآن';
         micBtn.disabled = false;
-        showManualPronInput();
       }
-    }
-
-    function evaluateSpokenWord(heard, expected) {
-      const resBox = document.getElementById('pron-result');
-      if (heard === expected) {
-        resBox.innerText = `رائع جداً! نطق سليم 100% (سمعت: "${heard}") ✅`;
-        resBox.style.color = 'var(--green)';
-      } else {
-        resBox.innerText = `قريب! سمعت: "${heard}" — الكلمة المطلوبة: "${expected}" ❌`;
-        resBox.style.color = 'var(--red)';
-      }
-    }
-
-    function showManualPronInput() {
-      const resBox = document.getElementById('pron-result');
-      resBox.innerHTML = `
-        <div style="margin-top: 10px; background: rgba(139,92,246,0.08); padding: 10px; border-radius: 12px; border: 1px dashed var(--border);">
-          <div style="font-size: 13px; margin-bottom: 6px;">اضغط على الخانة ثم اضغط ميكروفون لوحة المفاتيح 🎙️:</div>
-          <input type="text" id="manual-voice-input" placeholder="اضغط مايك الكيبورد وانطق..." style="direction: ltr; text-align: center;" oninput="checkManualVoice(this.value)" />
-        </div>
-      `;
-      const inp = document.getElementById('manual-voice-input');
-      if (inp) inp.focus();
-    }
-
-    function checkManualVoice(val) {
-      if (!val) return;
-      const heard = val.trim().toLowerCase();
-      const expected = currentPronWord.en.toLowerCase();
-      evaluateSpokenWord(heard, expected);
     }
 
     renderList();
